@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, forwardRef, useImperativeHandle, useEffect } from 'react'
+import React, { useRef, useState, useCallback, forwardRef, useImperativeHandle, useEffect, memo } from 'react'
 import {
     ViewerApp,
     AssetManagerPlugin,
@@ -14,6 +14,7 @@ import {
 } from "webgi";
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ScrollAnimation } from '../lib/scroll-animation';
 
 // https://github.com/pixotronics/webgi-vanilla-starter/blob/master/src/index.ts
 // 42:08
@@ -23,6 +24,12 @@ gsap.registerPlugin(ScrollTrigger)
 const WebGiViewer = () => {
 
     const canvasRef = useRef(null)
+
+    const memorizedScrollAnimation = useCallback((position, target, onUpdate) => {
+        if (position && target && onUpdate) {
+            ScrollAnimation(position, target, onUpdate)
+        }
+    }, [])
 
     const setupViewer = useCallback(async () => {
 
@@ -72,12 +79,20 @@ const WebGiViewer = () => {
         viewer.scene.activeCamera.setCameraOptions({ controlsEnabled: false })
         window.scrollTo(0, 0)
         let needsUpdate = true
+
+        const onUpdate = () => {
+            needsUpdate = true
+            viewer.setDirty()
+        }
+
         viewer.addEventListener("preFrame", () => {
             if (needsUpdate) {
                 camera.positionTargetUpdated(true)
                 needsUpdate = false
             }
         })
+
+        memorizedScrollAnimation(position, target, onUpdate)
     }, []);
 
     useEffect(() => {
